@@ -6,20 +6,20 @@ import { unpkgPathPlugin, fetchPlugin } from "./plugins/";
 
 const App = () => {
   const ref = useRef<any>();
+  const iframeRef = useRef<any>();
   const [input, setInput] = useState("");
   const [code, setCode] = useState("");
 
   const startService = async () => {
     ref.current = await esbuild.startService({
       worker: true,
-      wasmURL: "https://unpkg.com/esbuild-wasm@0.8.27/esbuild.wasm",
+      wasmURL: "/esbuild.wasm",
+      //wasmURL: "https://unpkg.com/esbuild-wasm@0.8.27/esbuild.wasm",
     });
   };
 
   useEffect(() => {
     startService();
-
-    return () => {};
   }, []);
 
   const onClick = async () => {
@@ -37,12 +37,33 @@ const App = () => {
       },
     });
 
-    setCode(result.outputFiles[0].text);
+    //setCode(result.outputFiles[0].text);
+
+    iframeRef.current.contentWindow.postMessage(
+      result.outputFiles[0].text,
+      "*"
+    );
   };
+
+  const html = `
+   <html>
+    <head>
+      <body>
+        <div id="root"></div>
+        <script>
+          window.addEventListener('message',(e)=>{
+            eval(e.data)
+          })
+        </script>
+      </body>
+    </head>
+   </html>
+`;
 
   return (
     <div>
       <textarea
+        style={{ fontSize: "20px" }}
         value={input}
         onChange={(e) => setInput(e.target.value)}
       ></textarea>
@@ -50,6 +71,12 @@ const App = () => {
         <button onClick={onClick}>Submit</button>
       </div>
       <pre>{code}</pre>
+      <iframe
+        style={{ border: "1px solid red" }}
+        ref={iframeRef}
+        sandbox="allow-scripts"
+        srcDoc={html}
+      ></iframe>
     </div>
   );
 };
